@@ -416,12 +416,11 @@ class: branded
 ```js
 // routes/users.js
 export default async function users(fastify) {
-  fastify.get('/users', async (req) => {
+  fastify.get('/users', async req => {
     req.log.info('Users route called')
 
-      return [{ username: 'alice' }, { username: 'bob' }]
-    }
-  )
+    return [{ username: 'alice' }, { username: 'bob' }]
+  })
 }
 ```
 
@@ -515,7 +514,7 @@ const schema = {
 }
 
 export default async function users(fastify) {
-  fastify.get('/users', { schema }, async (req) => {
+  fastify.get('/users', { schema }, async req => {
     req.log.info('Users route called')
 
     return [{ username: 'alice' }, { username: 'bob' }]
@@ -599,9 +598,9 @@ test('GET /users', async t => {
 
     const res = await fastify.inject('/users')
 
-    t.strictEqual(res.statusCode, 200)
+    t.equal(res.statusCode, 200)
 
-    t.equivalent(await res.json(), [
+    t.same(await res.json(), [
       { username: 'alice' },
       { username: 'bob' },
     ])
@@ -998,6 +997,8 @@ class: branded
 
   - Exposes an `authenticate` decorator on the Fastify instance which verifies the authentication token and responds with an error if invalid
 
+- Register the new plugin in `index.js`
+
 ---
 
 # Step 9: Solution
@@ -1029,6 +1030,36 @@ export default authenticate
 
 class: branded
 
+# Step 9: Solution/2
+
+```js
+// index.js
+import Fastify from 'fastify'
+
+function buildServer(config) {
+  const opts = {
+    ...
+  }
+
+  const fastify = Fastify(opts)
+
+  fastify.register(import('./plugins/authenticate.js'), opts)
+
+  fastify.register(import('./routes/login.js'))
+  fastify.register(import('./routes/users.js'))
+
+  fastify.log.info('Fastify is starting up!')
+
+  return fastify
+}
+
+export default buildServer
+```
+
+---
+
+class: branded
+
 # Step 10: Hooks
 
 - In this step we're going to build on the previous step by using a fastify hook with our decorator for the protected route
@@ -1049,7 +1080,7 @@ class: branded
 
 - Create a `GET /` route in `routes/user/index.js`
 
-- Require authentication using the `preValidation` Fastify hook
+- Require authentication using the `onRequest` Fastify hook
 
 - Use the `fastify.authenticate` decorator
 
@@ -1077,7 +1108,7 @@ export default async function user(fastify) {
   fastify.get(
     '/user',
     {
-      preValidation: [fastify.authenticate],
+      onRequest: [fastify.authenticate],
       schema,
     },
     async req => req.user
@@ -1288,7 +1319,7 @@ export default async function login(fastify) {
 
     if (!user) throw errors.Unauthorized()
 
-    return { token: fastify.jwt.sign({ payload: user }) }
+    return { token: fastify.jwt.sign({ username }) }
   })
 }
 ```
@@ -1323,7 +1354,7 @@ const schema = {
 export default async function users(fastify) {
   fastify.get(
     '/',
-    { preValidation: [fastify.authenticate], schema },
+    { onRequest: [fastify.authenticate], schema },
     async () => {
       const { rows: users } = await fastify.pg.query(
         'SELECT id, username FROM users'
