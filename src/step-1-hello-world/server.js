@@ -1,18 +1,5 @@
-import Fastify from 'fastify'
+import build from './app.js'
 
-const start = async function () {
-  const fastify = Fastify()
+const app = await build()
 
-  fastify.get('/', () => {
-    return { hello: 'world' }
-  })
-
-  try {
-    await fastify.listen(3000)
-  } catch (err) {
-    fastify.log.error(err)
-    process.exit(1)
-  }
-}
-
-start()
+wait app.listen(3000)
